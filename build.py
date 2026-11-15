@@ -381,7 +381,10 @@ class Suites:
                    RAMAN_DEPLOY_DIR=str(DEPLOY))
         self.suite("studio_live", [python, "-m", "unittest", "-v", "test_studio_live"], cwd=ROOT / "native" / "sim_runner",
                    RAMAN_DEPLOY_DIR=str(DEPLOY))
-        tests = self.tools.build("controller-tests", ROOT / "laser_test" / "tests", "-DPython3_EXECUTABLE=%s" % python)
+        # The window tests' stand-in data layer needs the standard library only. The interpreter this script
+        # runs on, not the venv's: on Windows a venv's python.exe is a launcher that runs Python as a child
+        # process, and the tests compare the id of the process they started with the one Python reports.
+        tests = self.tools.build("controller-tests", ROOT / "laser_test" / "tests", "-DPython3_EXECUTABLE=%s" % sys.executable)
         self.suite("handshake_tests", [tests / ("handshake_tests" + EXE)], cwd=tests)
         self.suite("settings_tests", [tests / ("settings_tests" + EXE)], cwd=tests)
         self.suite("ui_tests", [tests / "ui_home" / ("ui_tests" + EXE)], cwd=tests / "ui_home")
