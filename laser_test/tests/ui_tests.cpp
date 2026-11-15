@@ -467,6 +467,17 @@ struct HandshakeTest {   // friend of MainWindow and DataPanels
         return !p.refreshRunning && !p.syncRunning && !p.classifyRunning && !p.offlineRunning && !p.importRunning && !p.provenanceRunning &&
                !p.reviewShowRunning && !p.reviewSetRunning && p.dataLayer->running() == 0;
     }
+    // Waits for `done`, then for every command in flight to end. The periodic sync is held meanwhile: in
+    // the demo catalog a capture that waits to be classified keeps it due, and with the test's 150 ms
+    // interval a machine whose sync takes longer than that never has a moment without one in flight.
+    static bool reachedAndSettled(DataPanels& p, const std::function<bool()>& done, int timeout = 60000) {
+        if (!waitUntil(done, timeout)) return false;
+        const bool periodic = p.autoSync.isActive();
+        p.autoSync.stop();
+        const bool calm = waitUntil([&]{ return settled(p); }, timeout);
+        if (periodic) p.autoSync.start();
+        return calm && done();
+    }
     static bool firstRefresh(DataPanels& p) {
         return waitUntil([&]{ return !p.status.isEmpty() && settled(p); }, 60000);
     }
@@ -1129,16 +1140,16 @@ struct HandshakeTest {   // friend of MainWindow and DataPanels
         p.captureFinished();
         check(p.syncDue, "a finished capture waits too while the next acquisition is already under way");
         p.setAcquisitionBusy(false);
-        check(waitUntil([&]{ return p.syncWork() == 0 && settled(p); }, 60000), "what a sync can move on has been moved");
+        check(reachedAndSettled(p, [&]{ return p.syncWork() == 0; }), "what a sync can move on has been moved");
         p.classify();
-        check(waitUntil([&]{ return p.toClassify() == 0 && settled(p); }, 60000), "and classified");
+        check(reachedAndSettled(p, [&]{ return p.toClassify() == 0; }), "and classified");
         qsizetype syncs = commandsCalled().count("sync");
         spin(900);
         check(p.waiting() == 1 && commandsCalled().count("sync") == syncs,
               "a capture that waits for import-session alone starts no periodic sync: no sync can move it");
         // Supply the fields of the one capture that cannot register; the syncs then empty the queue.
         p.importFolder(home() + "/scan_sessions/2d_scan_20260924_141500_001", "S-OLD", "operator", "lab");
-        check(waitUntil([&]{ return p.waiting() == 0 && settled(p); }, 60000), "everything is registered");
+        check(reachedAndSettled(p, [&]{ return p.waiting() == 0; }), "everything is registered");
         check(p.pillState().text == uiJoin({"demo", "synced"}) && p.pillState().tone == UiTone::Ok && p.toClassify() > 0,
               "nothing waits on this Mac any more; the classifier has not run yet");
         syncs = commandsCalled().count("sync");
@@ -1169,7 +1180,7 @@ struct HandshakeTest {   // friend of MainWindow and DataPanels
         p.refresh();
         check(waitUntil([&]{ return settled(p) && p.demoCatalog(); }), "the demo catalog again");
         p.classify();
-        check(waitUntil([&]{ return p.toClassify() == 0 && p.waiting() == 0 && settled(p); }, 60000), "everything is classified");
+        check(reachedAndSettled(p, [&]{ return p.toClassify() == 0 && p.waiting() == 0; }), "everything is classified");
         spin(300);
         syncs = commandsCalled().count("sync");
         spin(900);
