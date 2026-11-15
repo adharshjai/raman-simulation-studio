@@ -1,0 +1,19 @@
+# Made by build.py (all regenerable)
+/deploy/
+/build/
+/.venv/
+/native/**/bin/
+/native/**/obj/
+__pycache__/
+*.pyc
+.pytest_cache/
+# Hamamatsu's wrrusb2a.dll is not redistributable; every other DLL is made by the build.
+*.dll
+# Qt Creator's own settings for this computer (kit, run environment) and its autosave copies
+CMakeLists.txt.user
+.qtcreator/
+*.autosave
+# Local state written at run time
+controller.lock
+.DS_Store
+Thumbs.db

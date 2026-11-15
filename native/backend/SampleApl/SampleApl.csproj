@@ -1,0 +1,37 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- Capture backend: cross-platform port of laser_test/hardware/SampleApl (native/PORT_SPEC.md
+       section 4), simulator only (VendorTypes.cs says why). Framework-dependent build:
+       `dotnet publish -c Release -o bin/publish`.
+       Windows: the apphost SampleApl.exe is what the controller starts.
+       macOS/Linux: no apphost; the bash launcher `SampleApl` (exec dotnet SampleApl.dll) sits next to
+       SampleApl.dll under the name the controller starts. -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net9.0</TargetFramework>
+    <AssemblyName>SampleApl</AssemblyName>
+    <RootNamespace>SampleApl</RootNamespace>
+    <Nullable>disable</Nullable>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <InvariantGlobalization>false</InvariantGlobalization>
+    <UseAppHost>false</UseAppHost>
+    <UseAppHost Condition="'$(OS)' == 'Windows_NT'">true</UseAppHost>
+    <SelfContained>false</SelfContained>
+    <PublishSingleFile>false</PublishSingleFile>
+    <RollForward>Major</RollForward>
+    <SatelliteResourceLanguages>en</SatelliteResourceLanguages>
+    <GenerateDocumentationFile>false</GenerateDocumentationFile>
+  </PropertyGroup>
+
+  <ItemGroup Condition="'$(OS)' != 'Windows_NT'">
+    <!-- Launcher script: lands next to SampleApl.dll in the output and in bin/publish. -->
+    <None Include="SampleApl" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+  </ItemGroup>
+
+  <Target Name="MakeLauncherExecutable" AfterTargets="Publish" Condition="'$(OS)' != 'Windows_NT'">
+    <Exec Command="chmod +x &quot;$(PublishDir)SampleApl&quot;" />
+  </Target>
+  <Target Name="MakeLauncherExecutableInOutput" AfterTargets="Build" Condition="'$(OS)' != 'Windows_NT' And Exists('$(OutDir)SampleApl')">
+    <Exec Command="chmod +x &quot;$(OutDir)SampleApl&quot;" />
+  </Target>
+</Project>
