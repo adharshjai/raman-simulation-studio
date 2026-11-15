@@ -50,7 +50,7 @@ ENV_KEYS = ("RAMAN_MOTOR_SIMULATE", "RAMAN_MOTOR_CONFIG", "RAMAN_MOTOR_ACK_TIMEO
             "RAMAN_MOTOR_SIM_START", "RAMAN_MOTOR_SIM_LOG", "RAMAN_MOTOR_DEBUG")
 
 try:
-    import pyftdi.serialext            # noqa: F401  (installed in /opt/anaconda3, PORT_SPEC.md)
+    import pyftdi.serialext            # noqa: F401  (native/motor/requirements.txt, in .venv)
     from pyftdi.ftdi import Ftdi
     from pyftdi.usbtools import UsbTools, UsbToolsError, UsbDeviceDescriptor
     HAVE_PYFTDI = True

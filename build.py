@@ -11,8 +11,8 @@ with the Qt Charts module, CMake and Ninja (both come with Qt's online installer
 and on Windows Visual Studio 2022 or newer (or its Build Tools) with the "Desktop development
 with C++" workload. Node.js 18 or newer is optional: it runs the Studio page's own tests.
 
-Everything this script writes stays inside this folder: .venv/ (the data layer's packages, from
-PyPI), build/ and deploy/. Data a run left in deploy/ (scan_sessions/, dark_measurements/,
+Everything this script writes stays inside this folder: .venv/ (the data layer's and the motor
+program's packages, from PyPI), build/ and deploy/. Data a run left in deploy/ (scan_sessions/, dark_measurements/,
 data_catalog/) is kept when the script runs again.
 """
 
@@ -167,8 +167,8 @@ def make_venv() -> Path:
     if not python.is_file():
         say("   creating .venv with %s" % sys.executable)
         run([sys.executable, "-m", "venv", VENV])
-    run([python, "-m", "pip", "install", "--quiet", "--disable-pip-version-check", "-r",
-         ROOT / "data_layer" / "requirements.txt"])
+    run([python, "-m", "pip", "install", "--quiet", "--disable-pip-version-check",
+         "-r", ROOT / "data_layer" / "requirements.txt", "-r", ROOT / "native" / "motor" / "requirements.txt"])
     return python
 
 

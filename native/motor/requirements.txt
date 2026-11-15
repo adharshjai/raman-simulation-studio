@@ -1,0 +1,6 @@
+# The motor program's packages (installed into .venv by build.py). The simulator needs none of them;
+# the real transports do (pyserial for a serial port, pyftdi with pyusb for the KDC101's FTDI chip),
+# and so do the motor tests that check how the program picks its transport.
+pyserial==3.5
+pyftdi==0.57.2
+pyusb==1.3.1
