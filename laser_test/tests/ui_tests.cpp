@@ -1305,9 +1305,18 @@ struct HandshakeTest {   // friend of MainWindow and DataPanels
             if (pushButton && pushButton->fontMetrics().horizontalAdvance(pushButton->text()) + 8 > pushButton->width()) fail("button text cut: " + pushButton->text());
             if (scrolling && scrolling->isAncestorOf(control)) continue;
             const QRect area(control->mapTo(&w, QPoint(0, 0)), control->size());
-            for (QWidget* parent = control->parentWidget(); parent && parent != &w; parent = parent->parentWidget())
-                if (!QRect(parent->mapTo(&w, QPoint(0, 0)), parent->size()).contains(area))
-                    fail("control pushed out of its place: " + (pushButton ? pushButton->text() : control->objectName()));
+            for (QWidget* parent = control->parentWidget(); parent && parent != &w; parent = parent->parentWidget()) {
+                const QRect room(parent->mapTo(&w, QPoint(0, 0)), parent->size());
+                if (!room.contains(area)) {
+                    const auto rect = [](const QRect& r) { return QString("%1,%2 %3x%4").arg(r.x()).arg(r.y()).arg(r.width()).arg(r.height()); };
+                    const QLineEdit* edit = qobject_cast<QLineEdit*>(control);
+                    const QString name = pushButton ? pushButton->text() : !control->objectName().isEmpty() ? control->objectName()
+                                       : edit ? "line edit '" + edit->placeholderText() + "'" : QString(control->metaObject()->className());
+                    fail("control pushed out of its place: " + name + " at " + rect(area) + ", outside " +
+                         parent->metaObject()->className() + " '" + parent->objectName() + "' at " + rect(room) +
+                         "; font " + control->font().family() + " " + QString::number(control->font().pointSizeF()) + " pt");
+                }
+            }
         }
         const QList<StatusPill*> pills{w.display.simulation, w.display.backend, w.display.laser, w.display.scan, w.display.data};
         for (StatusPill* pill : pills) {

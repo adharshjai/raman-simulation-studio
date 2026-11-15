@@ -6,6 +6,11 @@ on:
     branches: [main]
   pull_request:
   workflow_dispatch:
+    inputs:
+      suites:
+        description: "Only these test suites (comma-separated, e.g. ui_tests,motor); empty runs all"
+        required: false
+        default: ""
 
 permissions:
   contents: read
@@ -50,6 +55,8 @@ jobs:
       - name: CMake and Ninja
         run: python -m pip install --disable-pip-version-check cmake ninja
       - name: Build and run every test suite
+        env:
+          RAMAN_TEST_ONLY: ${{ github.event.inputs.suites }}
         run: python build.py --test
       - name: Keep the test logs
         if: always()

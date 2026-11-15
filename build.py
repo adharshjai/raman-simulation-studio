@@ -3,6 +3,7 @@
 
     python build.py              build everything and assemble deploy/
     python build.py --test       the same, then run every test suite (10 to 20 minutes)
+    python build.py --test --only ui_tests,motor   only the suites named (as the summary prints them)
     python build.py --no-window  leave out the controller window (laser_test); the Studio needs only
                                  the headless runner
 
@@ -333,9 +334,10 @@ def assemble(tools: Toolchain, python: Path, dotnet: str, runner: Path, window: 
 
 
 class Suites:
-    def __init__(self, tools: Toolchain, python: Path):
+    def __init__(self, tools: Toolchain, python: Path, only=()):
         self.tools = tools
         self.python = python
+        self.only = set(only)
         self.logs = BUILD / "test-logs"
         shutil.rmtree(self.logs, ignore_errors=True)
         self.logs.mkdir(parents=True)
@@ -345,7 +347,12 @@ class Suites:
         self.environment.update(RAMAN_BACKEND_SIMULATE="1", RAMAN_MOTOR_SIMULATE="1", PYTHONDONTWRITEBYTECODE="1",
                                 PYTHONUTF8="1", DOTNET_CLI_TELEMETRY_OPTOUT="1")
 
+    def wanted(self, *names: str) -> bool:
+        return not self.only or any(name in self.only for name in names)
+
     def suite(self, name: str, command, cwd: Path = ROOT, **extra) -> None:
+        if not self.wanted(name):
+            return
         started = time.monotonic()
         log = self.logs / (name + ".log")
         environment = dict(self.environment, **extra)
@@ -369,7 +376,9 @@ class Suites:
         self.suite("data_layer", [python, "-m", "unittest", "discover", "-s", "tests", "-v"], cwd=ROOT / "data_layer")
         self.suite("studio_embedded", [python, ROOT / "studio" / "embed_assets.py", "--check"])
         node = shutil.which("node")
-        if node:
+        if not self.wanted("studio_engine", "studio_page"):
+            pass
+        elif node:
             self.suite("studio_engine", [node, ROOT / "studio" / "test_engine.mjs"])
             self.suite("studio_page", [node, ROOT / "studio" / "test_page.mjs"])
         else:
@@ -384,14 +393,16 @@ class Suites:
         # The window tests' stand-in data layer needs the standard library only. The interpreter this script
         # runs on, not the venv's: on Windows a venv's python.exe is a launcher that runs Python as a child
         # process, and the tests compare the id of the process they started with the one Python reports.
-        tests = self.tools.build("controller-tests", ROOT / "laser_test" / "tests", "-DPython3_EXECUTABLE=%s" % sys.executable)
-        self.suite("handshake_tests", [tests / ("handshake_tests" + EXE)], cwd=tests)
-        self.suite("settings_tests", [tests / ("settings_tests" + EXE)], cwd=tests)
-        self.suite("ui_tests", [tests / "ui_home" / ("ui_tests" + EXE)], cwd=tests / "ui_home")
-        e2e = self.tools.build("e2e", ROOT / "native" / "e2e")
-        copy_tree(DEPLOY / "handshake_v2", e2e / "handshake_v2")
-        (e2e / "raman_python.txt").write_text(str(python) + "\n", encoding="utf-8")
-        self.suite("e2e_simulated", [e2e / ("e2e_simulated_test" + EXE)], cwd=e2e)
+        if self.wanted("handshake_tests", "settings_tests", "ui_tests"):
+            tests = self.tools.build("controller-tests", ROOT / "laser_test" / "tests", "-DPython3_EXECUTABLE=%s" % sys.executable)
+            self.suite("handshake_tests", [tests / ("handshake_tests" + EXE)], cwd=tests)
+            self.suite("settings_tests", [tests / ("settings_tests" + EXE)], cwd=tests)
+            self.suite("ui_tests", [tests / "ui_home" / ("ui_tests" + EXE)], cwd=tests / "ui_home")
+        if self.wanted("e2e_simulated"):
+            e2e = self.tools.build("e2e", ROOT / "native" / "e2e")
+            copy_tree(DEPLOY / "handshake_v2", e2e / "handshake_v2")
+            (e2e / "raman_python.txt").write_text(str(python) + "\n", encoding="utf-8")
+            self.suite("e2e_simulated", [e2e / ("e2e_simulated_test" + EXE)], cwd=e2e)
 
 
 # ---------------------------------------------------------------------- main
@@ -401,6 +412,9 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     parser.add_argument("--test", action="store_true", help="run every test suite after the build")
     parser.add_argument("--no-window", action="store_true", help="do not build the controller window (laser_test)")
+    parser.add_argument("--only", metavar="SUITES", default=os.environ.get("RAMAN_TEST_ONLY", ""),
+                        help="with --test: run only these suites, comma-separated, as the summary names them "
+                             "(default: RAMAN_TEST_ONLY, else every suite)")
     parser.add_argument("--qt", metavar="KIT", help="Qt 6 kit folder, e.g. C:\\Qt\\6.8.3\\msvc2022_64 or ~/Qt/6.8.3/macos")
     args = parser.parse_args()
     started = time.monotonic()
@@ -433,7 +447,7 @@ def main() -> int:
             say("== done in %.0f s (add --test to run the test suites) ==" % (time.monotonic() - started))
             return 0
         say("== tests (logs in %s) ==" % (BUILD / "test-logs"))
-        suites = Suites(tools, python)
+        suites = Suites(tools, python, [name.strip() for name in args.only.split(",") if name.strip()])
         suites.run_all(window is not None)
         if suites.failed:
             say("!! %d suite(s) FAILED: %s" % (len(suites.failed), ", ".join(suites.failed)))
