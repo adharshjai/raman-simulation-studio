@@ -473,7 +473,16 @@ inline QIcon simulatedTag() {
 
 // The style sheet is written on top of one base style, so that the window looks the same on every
 // platform and in the offscreen snapshots of the test programs.
-inline void useUiBaseStyle() { QApplication::setStyle(QStyleFactory::create("Fusion")); }
+inline void useUiBaseStyle() {
+    QApplication::setStyle(QStyleFactory::create("Fusion"));
+#ifdef Q_OS_WIN
+    // The Windows interface font by name. A desktop session gives it anyway; without one (the offscreen
+    // platform of the tests) Qt's default is a generic family that resolves to a much wider face.
+    QFont font = QApplication::font();
+    font.setFamilies({QStringLiteral("Segoe UI")});
+    QApplication::setFont(font);
+#endif
+}
 
 // Tick marks at round values (0, 500, 1000 ...) instead of the range cut into equal parts: as many
 // as the axis has room for, chosen again when the range or the size of the chart changes.
