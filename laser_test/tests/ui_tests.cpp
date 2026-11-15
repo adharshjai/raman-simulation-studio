@@ -12,7 +12,8 @@
 static void check(bool ok, const char* message) {
     if (!ok) throw std::runtime_error(message);
 }
-static bool waitUntil(const std::function<bool()>& done, int timeout = 10000) {
+// Ends as soon as `done` holds; the limits only matter on a failure, and a busy CI machine needs generous ones.
+static bool waitUntil(const std::function<bool()>& done, int timeout = 30000) {
     QElapsedTimer timer; timer.start();
     while (!done() && timer.elapsed() < timeout) {
         QCoreApplication::processEvents(); QThread::msleep(5);
@@ -176,7 +177,7 @@ struct HandshakeTest {   // friend of MainWindow and DataPanels
         QElapsedTimer clock; clock.start();
         client.run({"sync"}, [&](const DataLayerReply& got) { reply = got; answered = true; });
         check(clock.elapsed() < 500 && !answered && client.running() == 1, "the call returns at once while the command runs");
-        check(waitUntil([&]{ return answered; }, 20000), "the slow command is answered");
+        check(waitUntil([&]{ return answered; }, 60000), "the slow command is answered");
         check(clock.elapsed() >= 1200 && reply.ok() && reply.json["status"].isObject(), "the answer is the slow command's own");
         // About 60 ticks of 20 ms in 1.2 s; a loaded machine delivers fewer, a blocked loop at most one.
         check(ticks >= 10, "the event loop kept running while the data layer was busy");
@@ -467,7 +468,7 @@ struct HandshakeTest {   // friend of MainWindow and DataPanels
                !p.reviewShowRunning && !p.reviewSetRunning && p.dataLayer->running() == 0;
     }
     static bool firstRefresh(DataPanels& p) {
-        return waitUntil([&]{ return !p.status.isEmpty() && settled(p); }, 20000);
+        return waitUntil([&]{ return !p.status.isEmpty() && settled(p); }, 60000);
     }
     static QJsonObject lastCall(const QString& command) {
         const QList<QJsonObject> made = calls();
@@ -1128,16 +1129,16 @@ struct HandshakeTest {   // friend of MainWindow and DataPanels
         p.captureFinished();
         check(p.syncDue, "a finished capture waits too while the next acquisition is already under way");
         p.setAcquisitionBusy(false);
-        check(waitUntil([&]{ return p.syncWork() == 0 && settled(p); }, 20000), "what a sync can move on has been moved");
+        check(waitUntil([&]{ return p.syncWork() == 0 && settled(p); }, 60000), "what a sync can move on has been moved");
         p.classify();
-        check(waitUntil([&]{ return p.toClassify() == 0 && settled(p); }, 20000), "and classified");
+        check(waitUntil([&]{ return p.toClassify() == 0 && settled(p); }, 60000), "and classified");
         qsizetype syncs = commandsCalled().count("sync");
         spin(900);
         check(p.waiting() == 1 && commandsCalled().count("sync") == syncs,
               "a capture that waits for import-session alone starts no periodic sync: no sync can move it");
         // Supply the fields of the one capture that cannot register; the syncs then empty the queue.
         p.importFolder(home() + "/scan_sessions/2d_scan_20260924_141500_001", "S-OLD", "operator", "lab");
-        check(waitUntil([&]{ return p.waiting() == 0 && settled(p); }, 20000), "everything is registered");
+        check(waitUntil([&]{ return p.waiting() == 0 && settled(p); }, 60000), "everything is registered");
         check(p.pillState().text == uiJoin({"demo", "synced"}) && p.pillState().tone == UiTone::Ok && p.toClassify() > 0,
               "nothing waits on this Mac any more; the classifier has not run yet");
         syncs = commandsCalled().count("sync");
@@ -1168,7 +1169,7 @@ struct HandshakeTest {   // friend of MainWindow and DataPanels
         p.refresh();
         check(waitUntil([&]{ return settled(p) && p.demoCatalog(); }), "the demo catalog again");
         p.classify();
-        check(waitUntil([&]{ return p.toClassify() == 0 && p.waiting() == 0 && settled(p); }, 20000), "everything is classified");
+        check(waitUntil([&]{ return p.toClassify() == 0 && p.waiting() == 0 && settled(p); }, 60000), "everything is classified");
         spin(300);
         syncs = commandsCalled().count("sync");
         spin(900);
@@ -1211,7 +1212,7 @@ struct HandshakeTest {   // friend of MainWindow and DataPanels
             studio->click();
         }
         check(!studio->isEnabled() && p.studio->starting(), "the button waits for the server's address");
-        check(waitUntil([&]{ return opened.size() == 1; }, 20000), "the page is opened once the server has named its address");
+        check(waitUntil([&]{ return opened.size() == 1; }, 60000), "the page is opened once the server has named its address");
         check(opened[0] == QUrl("http://127.0.0.1:8765/") && studio->isEnabled() && studio->toolTip().contains("http://127.0.0.1:8765/") &&
               w.statusBar()->currentMessage() == "Simulation Studio opened: http://127.0.0.1:8765/", "the address from the first output line");
         const QJsonObject call = lastCall("studio");
@@ -1230,7 +1231,7 @@ struct HandshakeTest {   // friend of MainWindow and DataPanels
         check(waitUntil([&]{ return !StudioLauncher::processAlive(server); }), "server ended");
         QFile::remove(home() + "/fake_studio_stop");
         studio->click();
-        check(waitUntil([&]{ return opened.size() == 3; }, 20000) && commandsCalled().count("studio") == 2 && p.studio->serverPid() != server, "a new server");
+        check(waitUntil([&]{ return opened.size() == 3; }, 60000) && commandsCalled().count("studio") == 2 && p.studio->serverPid() != server, "a new server");
         const qint64 second = p.studio->serverPid();
         check(AcquisitionProtocol::publish(home() + "/fake_studio_stop", "stop") && waitUntil([&]{ return !StudioLauncher::processAlive(second); }), "second server ended");
     }
