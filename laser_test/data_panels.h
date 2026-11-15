@@ -447,9 +447,10 @@ public:
         autoSync.setInterval(30000);
         connect(&autoSync, &QTimer::timeout, this, [this] {
             // Without a status the data layer did not answer last time: ask again. Else sync while
-            // there is something a sync can move on.
+            // there is something a sync can move on. A tick while a sync is still on its way adds
+            // nothing: that sync covers it, and a second one would only be queued behind it.
             if (!statusProblem.isEmpty()) refresh();
-            else if (periodicSyncDue()) syncWhenIdle();
+            else if (!syncRunning && periodicSyncDue()) syncWhenIdle();
         });
         connect(reviewerField, &QLineEdit::textChanged, this, [this] { updateControls(); });
         applyTheme();

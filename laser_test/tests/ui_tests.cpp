@@ -1318,9 +1318,22 @@ struct HandshakeTest {   // friend of MainWindow and DataPanels
                     const QLineEdit* edit = qobject_cast<QLineEdit*>(control);
                     const QString name = pushButton ? pushButton->text() : !control->objectName().isEmpty() ? control->objectName()
                                        : edit ? "line edit '" + edit->placeholderText() + "'" : QString(control->metaObject()->className());
+                    // What makes the content that wide: the widest minimum sizes among the parent's descendants.
+                    QList<QPair<int, QString>> widest;
+                    for (QWidget* inside : parent->findChildren<QWidget*>()) {
+                        if (!inside->isVisible()) continue;
+                        const QPushButton* b = qobject_cast<QPushButton*>(inside);
+                        const QLabel* l = qobject_cast<QLabel*>(inside);
+                        widest << qMakePair(inside->minimumSizeHint().width(), QString("%1 '%2'").arg(inside->metaObject()->className(),
+                                            b ? b->text() : l ? l->text().left(40) : inside->objectName()));
+                    }
+                    std::sort(widest.begin(), widest.end(), [](const auto& a, const auto& b) { return a.first > b.first; });
+                    QStringList top;
+                    for (int i = 0; i < std::min<qsizetype>(6, widest.size()); ++i) top << QString("%1 %2").arg(widest[i].second).arg(widest[i].first);
                     fail("control pushed out of its place: " + name + " at " + rect(area) + ", outside " +
                          parent->metaObject()->className() + " '" + parent->objectName() + "' at " + rect(room) +
-                         "; font " + control->font().family() + " " + QString::number(control->font().pointSizeF()) + " pt");
+                         "; font " + control->font().family() + " " + QString::number(control->font().pixelSize()) + " px; widest minimum sizes: " +
+                         top.join(", "));
                 }
             }
         }
