@@ -162,8 +162,15 @@ python3 build.py --test   (macOS)
 builds everything, then runs every suite: the data layer, the Studio page (with Node.js), the
 motor program, the capture backend and its safety stop, the controller's own test programs, the
 headless runner, an end-to-end simulated scan, and the Studio in LIVE mode (Play, then Stop, through
-the server). Each suite's output is in `build/test-logs/`. GitHub Actions runs the same command on
-Windows and macOS for every push (`.github/workflows/build-and-test.yml`).
+the server). Each suite's output is in `build/test-logs/`; `--only ui_tests,motor` runs just the
+suites named. GitHub Actions runs the same command on Windows and macOS for every push
+(`.github/workflows/build-and-test.yml`).
+
+One thing is checked on macOS only: that every control of the controller window fits its place at
+1440 × 880 and 1180 × 720. The tests draw the window without a screen, and on Windows text then
+measures about twice as wide as on a desktop, so those pixel checks are left out there. The window's
+layout has not been looked at on a Windows desktop; the Studio itself is a web page and is not
+affected.
 
 ## 7. What is in this repository
 
