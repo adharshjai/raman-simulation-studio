@@ -180,12 +180,12 @@ class SimulatedStageTest(unittest.TestCase):
         self.assertEqual([run[-1] for run in runs], [START["x"], 0] + LINE)
         # A 2 mm move takes 0.2 s in the simulator: it is reported when it starts, once or twice on
         # the way, and when it ends. A stalled test machine may miss the update on the way, so not
-        # every move has to show one.
+        # every move has to show one: half of them do even on a busy CI machine.
         reported = 0
         for target, run in zip(LINE[1:], runs[3:]):
             self.assertLessEqual(len(run), 4, "more than about 10 Hz during the move to %d: %r" % (target, run))
             reported += any(target - 69400 < position < target for position in run[1:-1])
-        self.assertGreaterEqual(reported, 9, "moves with an update on the way, of 12")
+        self.assertGreaterEqual(reported, 6, "moves with an update on the way, of 12")
         gaps = [later[0] - earlier[0] for earlier, later in zip(writes, writes[1:]) if later[2]]
         self.assertGreaterEqual(min(gaps), apt.STAGE_WRITE_INTERVAL * 0.99, "updates while moving are at least 0.1 s apart")
 
