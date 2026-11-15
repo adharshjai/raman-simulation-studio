@@ -566,6 +566,14 @@ def main(argv):
         return 3
     elif mode == "crash":
         sys.stdout.flush()
+        if os.name == "nt":
+            # How a crashed Windows process ends: with an exception code (here an access violation),
+            # which Qt reports as a crash; a plain exit code would be a normal exit.
+            import ctypes
+            kernel32 = ctypes.windll.kernel32
+            kernel32.GetCurrentProcess.restype = ctypes.c_void_p
+            kernel32.TerminateProcess.argtypes = (ctypes.c_void_p, ctypes.c_uint)
+            kernel32.TerminateProcess(kernel32.GetCurrentProcess(), 0xC0000005)
         os.kill(os.getpid(), signal.SIGKILL if hasattr(signal, "SIGKILL") else signal.SIGTERM)
     try:
         if mode == "error":

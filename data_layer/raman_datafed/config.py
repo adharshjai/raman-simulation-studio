@@ -13,6 +13,7 @@ import os
 import re
 import stat
 import tempfile
+import time
 from pathlib import Path
 
 CONFIG_FILE_NAME = "datafed_config.json"
@@ -79,6 +80,24 @@ def seconds_since(text):
     return (datetime.datetime.now(datetime.timezone.utc) - then).total_seconds()
 
 
+_REPLACE_RETRY_SECONDS = 2.0
+
+
+def _replace(source, target):
+    """os.replace. On Windows a process that has the target open for reading at that moment (Python
+    opens files without delete sharing there) makes it fail with access denied; it is tried again
+    for up to two seconds, as the readers only hold the file while they read it."""
+    deadline = time.monotonic() + _REPLACE_RETRY_SECONDS
+    while True:
+        try:
+            os.replace(source, target)
+            return
+        except PermissionError:
+            if os.name != "nt" or time.monotonic() >= deadline:
+                raise
+            time.sleep(0.02)
+
+
 def atomic_write_bytes(path, data):
     """Replace `path` in one step, so that a reader never sees a half-written file."""
     path = Path(path)
@@ -90,7 +109,7 @@ def atomic_write_bytes(path, data):
             stream.flush()
             os.fsync(stream.fileno())
         os.chmod(temporary, mode)
-        os.replace(temporary, path)
+        _replace(temporary, path)
     except BaseException:
         with contextlib.suppress(OSError):
             os.unlink(temporary)
