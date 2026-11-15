@@ -861,10 +861,16 @@ struct HandshakeTest {   // friend of MainWindow and DataPanels
               p.captureFacts->toPlainText().contains("in the catalog used before: r6g 0.97"), "DataFed is not asked about a record id of the previous catalog");
         p.sync(false);
         check(waitUntil([&]{ return settled(p) && !p.catalogChanged(); }), "the sync binds the rows to the catalog in use");
-        row = rowOf(p, "TEST-PLATE-A", 1);
-        check(p.captureTable->horizontalHeaderItem(3)->text() == "State" && cellText(p, row, 4) == "d/101" && !p.periodicSyncDue() &&
-              waitUntil([&]{ return settled(p) && commandsCalled().count("provenance") == provenanceAsked + 1; }) &&
-              p.captureFacts->toPlainText().contains("d/101") && !p.captureFacts->toPlainText().contains("catalog used before"),
+        // The sync ends, the lists are read again, then the selected row's provenance is asked for: on a slow
+        // machine these come one after the other, so the whole state is waited for.
+        const auto bound = [&] {
+            if (!settled(p)) return false;
+            row = rowOf(p, "TEST-PLATE-A", 1);
+            return p.captureTable->horizontalHeaderItem(3)->text() == "State" && cellText(p, row, 4) == "d/101" &&
+                   commandsCalled().count("provenance") == provenanceAsked + 1 &&
+                   p.captureFacts->toPlainText().contains("d/101") && !p.captureFacts->toPlainText().contains("catalog used before");
+        };
+        check(waitUntil(bound) && !p.periodicSyncDue(),
               "then the rows are this catalog's again, the provenance is asked for, and no other periodic sync is due");
     }
 
