@@ -18,7 +18,8 @@ static QByteArray readFile(const QString& path) {
     QFile f(path); if (!f.open(QIODevice::ReadOnly)) return {};
     return f.readAll();
 }
-static bool waitUntil(const std::function<bool()>& done, int timeout = 4000) {
+// Ends as soon as `done` holds; the limit only matters on a failure, and a busy CI machine needs a generous one.
+static bool waitUntil(const std::function<bool()>& done, int timeout = 20000) {
     QElapsedTimer timer; timer.start();
     while (!done() && timer.elapsed() < timeout) {
         QCoreApplication::processEvents(); QThread::msleep(5);
