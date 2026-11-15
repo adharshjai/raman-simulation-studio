@@ -467,9 +467,10 @@ struct HandshakeTest {   // friend of MainWindow and DataPanels
         return !p.refreshRunning && !p.syncRunning && !p.classifyRunning && !p.offlineRunning && !p.importRunning && !p.provenanceRunning &&
                !p.reviewShowRunning && !p.reviewSetRunning && p.dataLayer->running() == 0;
     }
-    // Waits for `done`, then for every command in flight to end. The periodic sync is held meanwhile: in
-    // the demo catalog a capture that waits to be classified keeps it due, and with the test's 150 ms
-    // interval a machine whose sync takes longer than that never has a moment without one in flight.
+    // Waits for `done`, then for every command in flight to end. The periodic timer is held meanwhile: in
+    // the demo catalog a capture that waits to be classified keeps a sync due, a failed status is asked
+    // for again at every tick, and with the test's 150 ms interval a machine whose command takes longer
+    // than that never has a moment without one in flight.
     static bool reachedAndSettled(DataPanels& p, const std::function<bool()>& done, int timeout = 60000) {
         if (!waitUntil(done, timeout)) return false;
         const bool periodic = p.autoSync.isActive();
@@ -1188,11 +1189,11 @@ struct HandshakeTest {   // friend of MainWindow and DataPanels
         // The data layer stops answering: its status is asked for again at the same interval.
         control({{"status", QJsonObject{{"mode", "error"}}}});
         p.refresh();
-        check(waitUntil([&]{ return !p.statusProblem.isEmpty() && settled(p); }), "failed status");
+        check(reachedAndSettled(p, [&]{ return !p.statusProblem.isEmpty(); }), "failed status");
         const qsizetype asked = commandsCalled().count("status");
         check(waitUntil([&]{ return commandsCalled().count("status") >= asked + 2; }), "the status is asked for again");
         control({});
-        check(waitUntil([&]{ return p.statusProblem.isEmpty() && settled(p); }), "and the tab recovers by itself");
+        check(reachedAndSettled(p, [&]{ return p.statusProblem.isEmpty(); }), "and the tab recovers by itself");
     }
 
     static void headlessWindow() {
