@@ -863,15 +863,23 @@ struct HandshakeTest {   // friend of MainWindow and DataPanels
         check(waitUntil([&]{ return settled(p) && !p.catalogChanged(); }), "the sync binds the rows to the catalog in use");
         // The sync ends, the lists are read again, then the selected row's provenance is asked for: on a slow
         // machine these come one after the other, so the whole state is waited for.
+        // The provenance is asked for at least once; a slow machine may ask again when the list is read again.
         const auto bound = [&] {
             if (!settled(p)) return false;
             row = rowOf(p, "TEST-PLATE-A", 1);
             return p.captureTable->horizontalHeaderItem(3)->text() == "State" && cellText(p, row, 4) == "d/101" &&
-                   commandsCalled().count("provenance") == provenanceAsked + 1 &&
+                   commandsCalled().count("provenance") > provenanceAsked &&
                    p.captureFacts->toPlainText().contains("d/101") && !p.captureFacts->toPlainText().contains("catalog used before");
         };
-        check(waitUntil(bound) && !p.periodicSyncDue(),
-              "then the rows are this catalog's again, the provenance is asked for, and no other periodic sync is due");
+        if (!waitUntil(bound)) {
+            row = rowOf(p, "TEST-PLATE-A", 1);
+            throw std::runtime_error(QString("the rows are not this catalog's again: header '%1', record '%2', provenance asked %3 more time(s), "
+                                             "settled %4, facts '%5'")
+                                         .arg(p.captureTable->horizontalHeaderItem(3)->text(), cellText(p, row, 4))
+                                         .arg(commandsCalled().count("provenance") - provenanceAsked).arg(settled(p))
+                                         .arg(p.captureFacts->toPlainText().simplified().left(240)).toStdString());
+        }
+        check(!p.periodicSyncDue(), "then the rows are this catalog's again, the provenance is asked for, and no other periodic sync is due");
     }
 
     static void reviewTab() {
