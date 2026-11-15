@@ -482,6 +482,9 @@ class DyingAnywhere(SyncCase):
         return False
 
     def test_nothing_is_lost_and_nothing_is_made_twice(self):
+        # Each round starts with the data catalog folder removed; Windows cannot remove the ledger's
+        # file while the ledger of setUp has it open.
+        self.ledger.close()
         session = support.make_session(self.home, points=2)
         names = self.names()
         deaths = 0
@@ -699,7 +702,7 @@ class DuringAScan(SyncCase):
         point = support.point_dict(session["session_id"], point_id, capture=support.capture_block())
         text = support.json.dumps(point, indent=4, sort_keys=True)
         path = session["folder"] / ("point_%04d.json" % point_id)
-        path.write_text(text[: len(text) // 2], encoding="utf-8")
+        path.write_bytes(text[: len(text) // 2].encode("utf-8"))   # LF line ends, as the controller writes them
         return path, text
 
     def test_a_point_still_being_written_is_registered_once_it_is_complete(self):
@@ -715,7 +718,7 @@ class DuringAScan(SyncCase):
         self.assertEqual(self.ledger.count(), 1)
         self.assertEqual(self.ledger.count(states=["error"]), 0)
 
-        path.write_text(complete, encoding="utf-8")
+        path.write_bytes(complete.encode("utf-8"))
         result = self.sync()
         self.assertEqual((result["ingested"], result["registered"], result["errors"]), (1, 1, []))
         self.assertEqual(self.ledger.get_value(sync.LAST_PROBLEMS_KEY), "[]")

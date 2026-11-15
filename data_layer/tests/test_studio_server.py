@@ -205,7 +205,8 @@ class PageTest(ServerCase):
     def test_a_session_name_cannot_leave_the_scan_folder(self):
         refused = ["..", "../elsewhere", "%2E%2E%2Felsewhere", "..%2Felsewhere", "/etc", "%2Fetc", ".", "",
                    "_hidden_session", "a%00b", "%20padded", "..%5Celsewhere", str(self.home / "elsewhere")]
-        for name, expected in [(name, 400) for name in refused] + [("elsewhere", 404), ("else%5Cwhere", 404)]:
+        refused.append("else%5Cwhere")   # a backslash is a separator on Windows, so it is refused everywhere
+        for name, expected in [(name, 400) for name in refused] + [("elsewhere", 404)]:
             status, answer = self.get("/api/scan?session=" + name)
             self.assertEqual(status, expected, name)
             self.assertFalse(answer["ok"], name)
@@ -1513,7 +1514,11 @@ class CommandLineTest(unittest.TestCase):
         watchdog = threading.Timer(30, process.kill)
         watchdog.start()
         self.addCleanup(watchdog.cancel)
-        first = json.loads(process.stdout.readline())
+        line = process.stdout.readline()
+        if not line.strip():
+            process.kill()
+            self.fail("the server printed no address; its stderr:\n" + process.stderr.read()[-3000:])
+        first = json.loads(line)
         self.assertEqual(sorted(first), ["ok", "url"])
         self.assertTrue(first["ok"])
         return process, first["url"]

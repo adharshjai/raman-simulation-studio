@@ -45,6 +45,9 @@ import os, subprocess, sys
 launcher, cwd, pidfile, logfile = sys.argv[1:5]
 env = dict(os.environ, RAMAN_CONTROLLER_PID=str(os.getpid())) if os.name == "nt" else None
 child = subprocess.Popen([launcher], cwd=cwd, env=env, stdin=subprocess.DEVNULL, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+# Its own id: on Windows a venv's python.exe is a launcher that runs this script in a child process.
+with open(pidfile + ".controller", "w") as handle:
+    handle.write(str(os.getpid()))
 with open(pidfile, "w") as handle:
     handle.write(str(child.pid))
 with open(logfile, "ab", buffering=0) as log:
@@ -275,7 +278,7 @@ class WatchdogTest(unittest.TestCase):
             controller.kill()                      # SIGKILL: the controller gets no chance to clean up
             controller.wait(timeout=5)
             self.assertTrue(wait_until(lambda: not alive(backend_pid), 10), "the orphaned backend is still running")
-            self.assert_orderly_stop("the controller process %d is gone" % controller.pid)
+            self.assert_orderly_stop("the controller process %s is gone" % read_text(str(pidfile) + ".controller").strip())
         finally:
             if controller.poll() is None:
                 controller.kill()

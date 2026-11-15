@@ -111,7 +111,8 @@ struct HandshakeTest {   // friend of MainWindow and DataPanels
         qunsetenv("RAMAN_DATAFED_PYTHON");
         check(client.program() == "analysis-python", "neither variable nor file: the analysis interpreter");
         check(AcquisitionProtocol::publish(folder.path() + "/datafed_python.txt", "  /recorded/venv/bin/python  \nsecond line\n"), "write file");
-        check(client.program() == "/recorded/venv/bin/python", "first line of datafed_python.txt, trimmed");
+        // (On Windows a rooted path gets the drive of HOME.)
+        check(client.program() == QDir(folder.path()).absoluteFilePath("/recorded/venv/bin/python"), "first line of datafed_python.txt, trimmed");
         qputenv("RAMAN_DATAFED_PYTHON", "/from/the/environment/python");
         check(client.program() == "/from/the/environment/python", "the variable wins over the file");
         qunsetenv("RAMAN_DATAFED_PYTHON");

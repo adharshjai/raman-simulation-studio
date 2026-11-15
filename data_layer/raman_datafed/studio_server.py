@@ -889,7 +889,8 @@ class Studio:
     def scan(self, fields):
         selected = fields.get("session")
         # The name only ever selects among the folders found on disk; this is for a clear answer.
-        if selected is not None and (_text(fields, "session") != selected or "/" in selected
+        # No separator of any system and no drive: a folder name, never a path (also on Windows).
+        if selected is not None and (_text(fields, "session") != selected or any(c in selected for c in "/\\:")
                                      or selected.startswith(("_", "."))):
             raise _Refusal(400, "session must be the name of a session folder")
         answer = self._files.snapshot(selected)

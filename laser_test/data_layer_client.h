@@ -87,7 +87,8 @@ public:
         if (!qEnvironmentVariableIsEmpty("RAMAN_DATAFED_PYTHON")) return qEnvironmentVariable("RAMAN_DATAFED_PYTHON");
         QFile recorded(home + "/datafed_python.txt");
         if (recorded.open(QIODevice::ReadOnly | QIODevice::Text)) {
-            const QString path = QString::fromUtf8(recorded.readLine()).trimmed();
+            // Either separator on Windows: a path is relative to HOME, a bare name is looked up on PATH.
+            const QString path = QDir::fromNativeSeparators(QString::fromUtf8(recorded.readLine()).trimmed());
             if (!path.isEmpty()) return path.contains('/') ? QDir(home).absoluteFilePath(path) : path;
         }
         return fallbackInterpreter;

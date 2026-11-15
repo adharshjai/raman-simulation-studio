@@ -438,7 +438,7 @@ class Transfers(AdapterCase):
         self.api.dataPut.return_value = put_reply("task/55", sdms.TS_READY)
         transfer = self.catalog.put_data("d/101", "/Users/tester/raman/scan_sessions/s1/point_0001.json")
         self.api.dataPut.assert_called_once_with(
-            "d/101", "/Users/tester/raman/scan_sessions/s1/point_0001.json", wait=False, context=PROJECT)
+            "d/101", os.path.abspath("/Users/tester/raman/scan_sessions/s1/point_0001.json"), wait=False, context=PROJECT)
         self.assertEqual(transfer, Transfer("task/55", "queued", ""))
 
     def test_put_data_makes_a_relative_path_absolute(self):

@@ -144,6 +144,38 @@ namespace SampleApl
         [DllImport("kernel32.dll")]
         static extern bool TerminateProcess(IntPtr process, uint exitCode);
 
+        [StructLayout(LayoutKind.Sequential)]
+        struct ProcessBasicInformation
+        {
+            public IntPtr ExitStatus;
+            public IntPtr PebBaseAddress;
+            public IntPtr AffinityMask;
+            public IntPtr BasePriority;
+            public IntPtr UniqueProcessId;
+            public IntPtr InheritedFromUniqueProcessId;
+        }
+
+        [DllImport("ntdll.dll")]
+        static extern int NtQueryInformationProcess(IntPtr process, int informationClass, ref ProcessBasicInformation information,
+                                                    int length, out int returned);
+
+        /// <summary>Windows: the id of the process that started this one, or -1.</summary>
+        static int WindowsParentPid()
+        {
+            try
+            {
+                ProcessBasicInformation information = new ProcessBasicInformation();
+                int returned;
+                if (NtQueryInformationProcess(GetCurrentProcess(), 0, ref information, Marshal.SizeOf(information), out returned) != 0)
+                    return -1;
+                return (int)information.InheritedFromUniqueProcessId.ToInt64();
+            }
+            catch (Exception)
+            {
+                return -1;
+            }
+        }
+
         /// <summary>Ends the process at once with `code`, without running exit handlers that could block
         /// (POSIX _exit; TerminateProcess on this process on Windows).</summary>
         static void exit_now(int code)
@@ -219,12 +251,14 @@ namespace SampleApl
             return -1;
         }
 
-        /// <summary>Windows: open a handle to the process named by RAMAN_CONTROLLER_PID. A process that
-        /// cannot be opened, or that was created after this one (its pid was reused), is the controller
-        /// already gone.</summary>
+        /// <summary>Windows: open a handle to the process named by RAMAN_CONTROLLER_PID, else to the
+        /// process that started this one (what the macOS launcher hands down). A process that cannot be
+        /// opened, or that was created after this one (its pid was reused), is the controller already
+        /// gone.</summary>
         static void RememberControllerOnWindows()
         {
             controllerPid = RecordedControllerPid();
+            if (controllerPid <= 1) controllerPid = WindowsParentPid();
             if (controllerPid <= 1) return;
             IntPtr handle = OpenProcess(Synchronize | ProcessQueryLimitedInformation, false, controllerPid);
             if (handle == IntPtr.Zero)

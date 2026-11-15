@@ -118,10 +118,10 @@ class FakeQt(threading.Thread):
         super().__init__(daemon=True)
         self.directory, self.run_id, self.policy = directory, run, policy
         self.requests = []          # (id, x, y, z) in order of first appearance
-        self._stop = threading.Event()
+        self._stop_requested = threading.Event()
 
     def run(self):
-        while not self._stop.is_set():
+        while not self._stop_requested.is_set():
             try:
                 with open(os.path.join(self.directory, "request.txt"), "r") as handle:
                     tokens = handle.readline().split()
@@ -138,7 +138,7 @@ class FakeQt(threading.Thread):
             time.sleep(0.010)
 
     def stop(self):
-        self._stop.set()
+        self._stop_requested.set()
         self.join(2.0)
 
 
@@ -556,7 +556,9 @@ class MotorTestCase(unittest.TestCase):
         stand_in = r"""
 import json, os, subprocess, sys
 command, session, run, pidfile = json.loads(sys.argv[1]), sys.argv[2], sys.argv[3], sys.argv[4]
-child = subprocess.Popen(command + [session, run, "1d-y"], cwd=sys.argv[5],
+# Windows does not re-parent: there, like laser_test, the stand-in hands its own id down.
+env = dict(os.environ, RAMAN_CONTROLLER_PID=str(os.getpid())) if os.name == "nt" else None
+child = subprocess.Popen(command + [session, run, "1d-y"], cwd=sys.argv[5], env=env,
                          stdin=subprocess.DEVNULL, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 with open(pidfile, "w") as handle:
     handle.write(str(child.pid))

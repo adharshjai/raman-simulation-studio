@@ -928,7 +928,8 @@ struct HandshakeTest {
         check(QRegularExpression("^dark_\\d{8}_\\d{6}_\\d{3}\\.txt$").match(added[1]).hasMatch(), "dark_<stamp>.txt");
         check(scanLog(w).endsWith("[Dark] Saved: " + txt) && captureCalls(w).size() == 1, "one capture, saved and logged as before");
         // The .txt byte for byte, built here independently of the controller's writer: other tools read it.
-        const QByteArray bytes = readFile(txt);
+        // Text mode: CRLF line ends on Windows, as the original Windows controller wrote them.
+        const QByteArray bytes = readFile(txt).replace("\r\n", "\n");
         const QByteArray stamp = bytes.split('\n').value(1).mid(13);   // after "# Timestamp: "
         check(QRegularExpression("^\\d{4}-\\d{2}-\\d{2} \\d{2}:\\d{2}:\\d{2}\\.\\d{3}$").match(QString::fromUtf8(stamp)).hasMatch(), "local time stamp line");
         QByteArray expected = "# Dark Measurement\n# Timestamp: " + stamp + "\n# Points: 2048\nindex\traman_shift_cm-1\tintensity\n";
