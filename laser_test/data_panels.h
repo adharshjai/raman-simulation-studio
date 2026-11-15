@@ -613,9 +613,13 @@ private:
     }
 
     void setStatus(const QJsonObject& newStatus) {
+        const bool wasChanged = catalogChanged();
         status = newStatus;
         statusProblem.clear();
         showStatus();
+        // The rows may have come before the status that says whether they are the catalog's in use. The
+        // selected capture's details, and whether its provenance may be asked for, depend on that.
+        if (catalogChanged() != wasChanged) showCaptureDetails();
     }
     void showStatus() {
         catalogBadge->setText(demoCatalog() ? "DEMO" : "DATAFED");
