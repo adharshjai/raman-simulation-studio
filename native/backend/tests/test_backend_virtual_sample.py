@@ -405,7 +405,11 @@ class BothSimulatorsTest(unittest.TestCase):
                         problems.append(str(error))
                         return
                     points.append((point, int(tokens[3]), int(tokens[4]), int(tokens[5]), frame))
-                    publish(session / "response.txt", ("ACK %s %d OK %d\n" % (run, point, time.time() * 1000)).encode("ascii"))
+                    try:
+                        publish(session / "response.txt", ("ACK %s %d OK %d\n" % (run, point, time.time() * 1000)).encode("ascii"))
+                    except OSError as error:   # reported, not lost with the thread
+                        problems.append("ACK %d not published: %s" % (point, error))
+                        return
                     answered = point
                 time.sleep(0.01)
 

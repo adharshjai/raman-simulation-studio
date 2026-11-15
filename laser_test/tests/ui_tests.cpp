@@ -377,7 +377,12 @@ struct HandshakeTest {   // friend of MainWindow and DataPanels
         check(simulationUse(flag) == SimulationUse::Real, "0: the instrument is driven");
         qputenv(flag, "1");
         check(simulationUse(flag) == SimulationUse::Simulated, "1: simulated");
+#ifdef Q_OS_WIN
+        // Windows removes a variable that is set to the empty string, so "" cannot be tried there.
+        for (const char* other : {"true", "yes", "2", " 1"}) {
+#else
         for (const char* other : {"true", "yes", "2", "", " 1"}) {
+#endif
             qputenv(flag, other);
             check(simulationUse(flag) == SimulationUse::Unclear, "any other value: simulation not confirmed, the instruments count as live");
         }

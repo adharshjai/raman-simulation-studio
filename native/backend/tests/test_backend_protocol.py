@@ -51,13 +51,23 @@ def backend_env():
 
 
 def publish(path: Path, data: bytes):
-    """Atomic publication like AcquisitionProtocol::publish (temp file + rename)."""
+    """Atomic publication like AcquisitionProtocol::publish (temp file + rename). On Windows the
+    rename fails while the other side has the file open for reading; it is tried again, as the
+    controller and the motor program do."""
     tmp = path.with_name(path.name + ".tmp")
     with open(tmp, "wb") as handle:
         handle.write(data)
         handle.flush()
         os.fsync(handle.fileno())
-    os.replace(tmp, path)
+    deadline = time.monotonic() + 2.0
+    while True:
+        try:
+            os.replace(tmp, path)
+            return
+        except PermissionError:
+            if time.monotonic() >= deadline:
+                raise
+            time.sleep(0.01)
 
 
 class Backend:
