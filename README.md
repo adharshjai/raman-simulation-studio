@@ -37,15 +37,16 @@ classifier is a stand-in and the page says so.
 
 ### What to install (once)
 
-1. **Python 3.11 or newer** from <https://www.python.org/downloads/windows/>. In the installer, tick
+1. **Python 3.11 to 3.14** from <https://www.python.org/downloads/windows/> (the data layer's
+   pinned numpy and scikit-learn have no builds for newer ones). In the installer, tick
    **Add python.exe to PATH**.
-2. **Visual Studio 2022 Community** (free) from <https://visualstudio.microsoft.com/vs/community/>, or
-   just its Build Tools. In the Visual Studio Installer, tick the workload
-   **Desktop development with C++**. This gives the C++ compiler, and CMake and Ninja with it.
-3. **Qt 6** (6.8 or newer) with **Qt Charts**, from the Qt Online Installer
+2. **Visual Studio Community** 2022 or newer (free) from
+   <https://visualstudio.microsoft.com/vs/community/>, or just its Build Tools. In the Visual Studio
+   Installer, tick the workload **Desktop development with C++**. This gives the C++ compiler, and CMake and Ninja with it.
+3. **Qt 6** (6.10 or newer) with **Qt Charts**, from the Qt Online Installer
    (<https://www.qt.io/download-qt-installer-oss>; a free Qt account is needed). Install into the
    default folder `C:\Qt`. On the **Select Components** page:
-   - open **Qt** › **Qt 6.8.x** (or newer) and tick **MSVC 2022 64-bit**;
+   - open **Qt** › **Qt 6.10.x** (or newer) and tick **MSVC 2022 64-bit**;
    - in the same version, open **Additional Libraries** and tick **Qt Charts**.
 4. **.NET 9 SDK** from <https://dotnet.microsoft.com/download/dotnet/9.0> (the x64 SDK installer).
 5. Optional: **Git** (<https://git-scm.com/download/win>) to clone, and **Node.js** 18 or newer
@@ -65,7 +66,7 @@ py build.py
 
 `build.py` finds Qt in `C:\Qt` and sets up the Visual Studio compiler by itself; you do not need a
 Developer Command Prompt. If Qt is somewhere else, name the kit folder:
-`py build.py --qt D:\Qt\6.8.3\msvc2022_64`. The first build downloads the data layer's Python
+`py build.py --qt D:\Qt\6.10.1\msvc2022_64`. The first build downloads the data layer's Python
 packages (about 215 MB) into `.venv\`, and takes a few minutes. It ends with:
 
 ```
@@ -90,11 +91,11 @@ Options: `deploy\studio.cmd --no-open` (do not open a browser), `--port 8800` (a
 
 ### What to install (once)
 
-1. **Python 3.11 or newer**: from <https://www.python.org/downloads/macos/>, Homebrew
-   (`brew install python`) or Anaconda.
+1. **Python 3.11 to 3.14**: from <https://www.python.org/downloads/macos/>, Homebrew
+   (`brew install python@3.13`) or Anaconda.
 2. **Xcode Command Line Tools**: `xcode-select --install`.
-3. **Qt 6** (6.8 or newer) with **Qt Charts**, from the Qt Online Installer, into the default folder
-   `~/Qt`. On **Select Components**: **Qt** › **Qt 6.8.x** › tick **macOS** and, under
+3. **Qt 6** (6.10 or newer) with **Qt Charts**, from the Qt Online Installer, into the default folder
+   `~/Qt`. On **Select Components**: **Qt** › **Qt 6.10.x** › tick **macOS** and, under
    **Additional Libraries**, **Qt Charts**; under **Build Tools** (or **Developer and Designer
    Tools**), tick **CMake** and **Ninja**.
 4. **.NET 9 SDK** from <https://dotnet.microsoft.com/download/dotnet/9.0> (Arm64 installer on Apple
@@ -109,7 +110,7 @@ python3 build.py
 ./deploy/studio.sh
 ```
 
-`build.py` finds Qt in `~/Qt`; otherwise `python3 build.py --qt ~/Qt/6.8.3/macos`. The Studio
+`build.py` finds Qt in `~/Qt`; otherwise `python3 build.py --qt ~/Qt/6.10.1/macos`. The Studio
 prints its address (normally <http://127.0.0.1:8765/>) and opens your browser. **Ctrl-C** stops it.
 
 ## 4. Using the Studio
@@ -195,7 +196,7 @@ simulator shares with that library are declared in `native/backend/SampleApl/Ven
 ## 8. Troubleshooting
 
 - **"No Qt 6 kit found"**: pass the kit folder, the one that holds `bin` and `lib`:
-  `py build.py --qt C:\Qt\6.8.3\msvc2022_64` (Windows) or `python3 build.py --qt ~/Qt/6.8.3/macos`.
+  `py build.py --qt C:\Qt\6.10.1\msvc2022_64` (Windows) or `python3 build.py --qt ~/Qt/6.10.1/macos`.
 - **"The Qt kit ... has no Qt Charts"**: open Qt's Maintenance Tool (in `C:\Qt` or `~/Qt`), choose
   **Add or remove components**, and tick **Additional Libraries › Qt Charts** for your Qt version.
 - **"Visual Studio was not found" / "has no C++ compiler"** (Windows): install the **Desktop

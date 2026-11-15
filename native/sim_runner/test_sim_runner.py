@@ -86,7 +86,9 @@ class RunnerCase(unittest.TestCase):
                                      capture_output=True, text=True, check=True).stdout
         else:
             listing = subprocess.run(["/bin/ps", "-axo", "command="], capture_output=True, text=True, check=True).stdout
-        return [line for line in listing.splitlines() if str(self.home) in line]
+        # Qt passes some paths with forward slashes on Windows: look for both spellings of HOME.
+        spellings = {str(self.home), self.home.as_posix()}
+        return [line for line in listing.splitlines() if any(text in line for text in spellings)]
 
     def session(self, prefix):
         folders = sorted(self.home.glob("scan_sessions/%s*" % prefix))

@@ -41,10 +41,12 @@ jobs:
           node-version: "20"
       - uses: jurplel/install-qt-action@v4
         with:
-          version: "6.8.3"
+          version: "6.10.*"
           arch: ${{ matrix.qt_arch }}
           modules: qtcharts
           cache: true
+          # Keep the Python set up above: the data layer's pinned numpy and scikit-learn need wheels.
+          setup-python: false
       - name: CMake and Ninja
         run: python -m pip install --disable-pip-version-check cmake ninja
       - name: Build and run every test suite

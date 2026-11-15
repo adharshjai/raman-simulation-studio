@@ -98,7 +98,10 @@ class StudioLiveTest(unittest.TestCase):
                                      capture_output=True, text=True, check=True).stdout
         else:
             listing = subprocess.run(["/bin/ps", "-axo", "command="], capture_output=True, text=True, check=True).stdout
-        return [line for line in listing.splitlines() if str(self.home) in line and "raman_datafed" not in line]
+        # Qt passes some paths with forward slashes on Windows: look for both spellings of HOME.
+        spellings = {str(self.home), self.home.as_posix()}
+        return [line for line in listing.splitlines()
+                if any(text in line for text in spellings) and "raman_datafed" not in line]
 
     def test_play_a_capture_then_stop_a_scan_then_end_the_server(self):
         status, ping = self.request("GET", "/api/ping")

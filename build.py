@@ -6,10 +6,10 @@
     python build.py --no-window  leave out the controller window (laser_test); the Studio needs only
                                  the headless runner
 
-Needs Python 3.11 or newer (run this script with the Python you want the data layer to use), Qt 6
+Needs Python 3.11 to 3.14 (run this script with the Python you want the data layer to use), Qt 6
 with the Qt Charts module, CMake and Ninja (both come with Qt's online installer), the .NET 9 SDK,
-and on Windows Visual Studio 2022 or its Build Tools with the "Desktop development with C++"
-workload. Node.js 18 or newer is optional: it runs the Studio page's own tests.
+and on Windows Visual Studio 2022 or newer (or its Build Tools) with the "Desktop development
+with C++" workload. Node.js 18 or newer is optional: it runs the Studio page's own tests.
 
 Everything this script writes stays inside this folder: .venv/ (the data layer's packages, from
 PyPI), build/ and deploy/. Data a run left in deploy/ (scan_sessions/, dark_measurements/,
@@ -121,7 +121,7 @@ def windows_compiler_environment(kit: Path) -> dict:
         return environment
     vswhere = Path(os.environ.get("ProgramFiles(x86)", r"C:\Program Files (x86)")) / "Microsoft Visual Studio" / "Installer" / "vswhere.exe"
     if not vswhere.is_file():
-        raise BuildError("Visual Studio was not found. Install Visual Studio 2022 (or its Build Tools) with the "
+        raise BuildError("Visual Studio was not found. Install Visual Studio 2022 or newer (or its Build Tools) with the "
                          "\"Desktop development with C++\" workload, or run this script from a Developer Command Prompt.")
     install = subprocess.run([str(vswhere), "-latest", "-products", "*", "-requires",
                               "Microsoft.VisualStudio.Component.VC.Tools.x86.x64", "-property", "installationPath"],
@@ -135,7 +135,8 @@ def windows_compiler_environment(kit: Path) -> dict:
     for line in output.splitlines():
         key, separator, value = line.partition("=")
         if separator and key:
-            environment[key] = value
+            # Windows names are case-insensitive: "Path" from cmd replaces os.environ's "PATH".
+            environment[key.upper()] = value
     if not shutil.which("cl", path=environment.get("PATH")):
         raise BuildError("The Visual Studio C++ compiler could not be set up from %s" % script)
     return environment
@@ -158,8 +159,9 @@ def venv_python() -> Path:
 
 
 def make_venv() -> Path:
-    if sys.version_info < (3, 11):
-        raise BuildError("Python 3.11 or newer is needed (this is %s). Run build.py with a newer Python."
+    if not (3, 11) <= sys.version_info[:2] <= (3, 14):
+        raise BuildError("Python 3.11 to 3.14 is needed (this is %s): the data layer's pinned numpy and scikit-learn "
+                         "have builds for those only. Run build.py with one of them, e.g. py -3.13 build.py."
                          % platform.python_version())
     python = venv_python()
     if not python.is_file():
