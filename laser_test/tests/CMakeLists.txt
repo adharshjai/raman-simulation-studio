@@ -43,6 +43,8 @@ add_dependencies(settings_tests handshake_tests)
 # has no data layer, so those tests keep running without any data-layer process.
 find_package(Python3 COMPONENTS Interpreter)
 if(Python3_Interpreter_FOUND)
+    # Forward slashes: the path becomes a C string literal, where a Windows backslash would start an escape.
+    file(TO_CMAKE_PATH "${Python3_EXECUTABLE}" UI_TEST_PYTHON_PATH)
     set(UI_HOME "${CMAKE_BINARY_DIR}/ui_home")
     set(UI_HOME_FILES
         "${UI_HOME}/data_layer/raman_datafed/__main__.py"
@@ -62,7 +64,7 @@ if(Python3_Interpreter_FOUND)
     # of the window in several states, in the light and the dark appearance, at two sizes.
     foreach(program ui_tests ui_snapshot)
         add_executable(${program} ${program}.cpp "${CMAKE_BINARY_DIR}/main.moc")
-        target_compile_definitions(${program} PRIVATE HANDSHAKE_TESTING "UI_TEST_PYTHON=\"${Python3_EXECUTABLE}\"")
+        target_compile_definitions(${program} PRIVATE HANDSHAKE_TESTING "UI_TEST_PYTHON=\"${UI_TEST_PYTHON_PATH}\"")
         if(MSVC)
             target_compile_options(${program} PRIVATE /utf-8)
         endif()

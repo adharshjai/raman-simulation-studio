@@ -908,7 +908,8 @@ struct HandshakeTest {
               "this controller's own lock held: the message of the original program");
         const LockRefusal ownUnwritable = lockRefusal(false, QLockFile::UnknownError, home + "/controller.lock");
         check(ownUnwritable.title == "Controller lock not available" &&
-              ownUnwritable.text.startsWith("Cannot create " + home + "/controller.lock (it could not be written): "), "this controller's own lock file not writable");
+              ownUnwritable.text.startsWith("Cannot create " + QDir::toNativeSeparators(home + "/controller.lock") + " (it could not be written): "),
+              "this controller's own lock file not writable");
     }
 
     // ---- Darks (lead decision D1): every dark has its kind, and is paired with spectra of that kind only ----

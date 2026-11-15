@@ -1510,8 +1510,9 @@ class CommandLineTest(unittest.TestCase):
             env=support.cli_environment(self.home))
         self.addCleanup(process.communicate)
         self.addCleanup(process.kill)
-        # The address has to come at once; a process that prints nothing must not hang the test.
-        watchdog = threading.Timer(30, process.kill)
+        # The address comes once the data layer is imported (numpy, scikit-learn), which on a cold CI
+        # machine can take a minute; a process that prints nothing must still not hang the test.
+        watchdog = threading.Timer(120, process.kill)
         watchdog.start()
         self.addCleanup(watchdog.cancel)
         line = process.stdout.readline()

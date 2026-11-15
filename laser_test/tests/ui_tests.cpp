@@ -178,7 +178,8 @@ struct HandshakeTest {   // friend of MainWindow and DataPanels
         check(clock.elapsed() < 500 && !answered && client.running() == 1, "the call returns at once while the command runs");
         check(waitUntil([&]{ return answered; }, 20000), "the slow command is answered");
         check(clock.elapsed() >= 1200 && reply.ok() && reply.json["status"].isObject(), "the answer is the slow command's own");
-        check(ticks >= 30, "the event loop kept running while the data layer was busy");
+        // About 60 ticks of 20 ms in 1.2 s; a loaded machine delivers fewer, a blocked loop at most one.
+        check(ticks >= 10, "the event loop kept running while the data layer was busy");
         check(client.running() == 0, "nothing left running");
 
         control({{"sync", QJsonObject{{"mode", "slow"}, {"seconds", 30}}}});

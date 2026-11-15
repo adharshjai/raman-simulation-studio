@@ -1036,7 +1036,8 @@ for _line in child.stdout:
         index = lines.index("Failed to connect to X device 27266528")
         self.assertEqual(lines[index + 1][:8], "[Error] ", err)
         self.assertEqual(lines[index + 1], lines[-1])
-        self.assertIn(missing, lines[-1])
+        # pyserial names the port as Python writes a string: with doubled backslashes on Windows.
+        self.assertTrue(missing in lines[-1] or missing.replace("\\", "\\\\") in lines[-1], lines[-1])
         os.environ.pop("RAMAN_MOTOR_DEBUG")
 
         # 4. auto without ports -> pyftdi (factory and discovery patched: no USB access needed);
