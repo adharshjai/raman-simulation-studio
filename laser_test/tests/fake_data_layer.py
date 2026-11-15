@@ -85,6 +85,33 @@ def parse(argv):
     return home, command, options
 
 
+def lock_file(handle):
+    """Hold an exclusive lock on the open file until it is closed or the process ends: flock where it
+    exists, a lock on its first byte on Windows."""
+    if fcntl is not None:
+        fcntl.flock(handle, fcntl.LOCK_EX)
+        return
+    import msvcrt
+    while True:
+        handle.seek(0)
+        try:
+            msvcrt.locking(handle.fileno(), msvcrt.LK_NBLCK, 1)
+            return
+        except OSError:
+            time.sleep(0.01)
+
+
+def replace_file(source, target):
+    """os.replace; on Windows a reader that has the target open makes it fail for a moment."""
+    for _attempt in range(200):
+        try:
+            os.replace(source, target)
+            return
+        except PermissionError:
+            time.sleep(0.01)
+    os.replace(source, target)
+
+
 class Files:
     def __init__(self, home):
         self.home = home
@@ -100,14 +127,16 @@ class Files:
 
     def log_call(self, argv, command):
         entry = {"command": command, "argv": argv, "cwd": os.getcwd(), "pythonpath": os.environ.get("PYTHONPATH", "")}
-        with open(os.path.join(self.home, "fake_data_layer_calls.jsonl"), "a", encoding="utf-8") as handle:
-            handle.write(json.dumps(entry) + "\n")
+        # Several commands run at once; an append is not atomic between processes on Windows.
+        with open(os.path.join(self.home, "fake_data_layer_calls.lock"), "w") as guard:
+            lock_file(guard)
+            with open(os.path.join(self.home, "fake_data_layer_calls.jsonl"), "a", encoding="utf-8") as handle:
+                handle.write(json.dumps(entry) + "\n")
 
     def load_state(self):
         """The state, locked until save_state or the end of the process: two commands may run at once."""
-        if fcntl is not None:
-            self.lock = open(self.state_path + ".lock", "w")
-            fcntl.flock(self.lock, fcntl.LOCK_EX)
+        self.lock = open(self.state_path + ".lock", "w")
+        lock_file(self.lock)
         state = {"offline": False, "syncs": 0, "classified": [], "reported": [], "reviews": {}, "imported": [], "fixed": None,
                  "last_sync_utc": None}
         state.update(self.read("fake_data_layer_state.json", {}))
@@ -117,7 +146,7 @@ class Files:
         partial = self.state_path + ".writing"
         with open(partial, "w", encoding="utf-8") as handle:
             json.dump(state, handle)
-        os.replace(partial, self.state_path)
+        replace_file(partial, self.state_path)
 
 
 def prediction(record, label, top, confidence, outcome):
