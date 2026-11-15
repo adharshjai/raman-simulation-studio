@@ -1178,7 +1178,7 @@ struct HandshakeTest {   // friend of MainWindow and DataPanels
         check(commandsCalled().count("sync") == syncs + 1, "and no other one follows at the interval");
         control({});
         p.refresh();
-        check(waitUntil([&]{ return settled(p) && p.demoCatalog(); }), "the demo catalog again");
+        check(reachedAndSettled(p, [&]{ return p.demoCatalog(); }), "the demo catalog again");
         p.classify();
         check(reachedAndSettled(p, [&]{ return p.toClassify() == 0 && p.waiting() == 0; }), "everything is classified");
         spin(300);
